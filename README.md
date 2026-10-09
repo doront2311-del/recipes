@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# המתכונים שלי · Personal recipe app
 
-## Getting Started
+A small personal recipe app for iPhone (Hebrew, RTL). Add a recipe from an Instagram/TikTok link plus screenshots of the caption, a blog link, or pasted text; Claude turns it into one clean Hebrew recipe with metric units, which you review and save. Full-text fuzzy search in Hebrew and English, categories, servings scaling, and a cooking view that keeps the screen awake.
 
-First, run the development server:
+**Setup guide (Hebrew, step by step): [SETUP.md](SETUP.md)**
+
+## Stack
+
+- Next.js 15 (App Router) + TypeScript + Tailwind 4, deployed on Vercel
+- Supabase: Postgres (`recipes`, `categories`) and a public Storage bucket `recipe-images`. Schema: [`supabase/schema.sql`](supabase/schema.sql)
+- Anthropic API (`claude-sonnet-5-5` by default, override with `ANTHROPIC_MODEL`), server-side only, structured outputs via `betaZodOutputFormat`
+- Single password (`APP_PASSWORD`) + long-lived httpOnly cookie, enforced in `src/middleware.ts`
+- Client-side search with Fuse.js over normalized Hebrew (no niqqud, final letters folded)
+
+## Layout
+
+| Path | What |
+|---|---|
+| `src/app/api/extract` | URL fetch + screenshots + text → one Claude call → draft recipe |
+| `src/lib/extract-url.ts` | JSON-LD Recipe, og: tags, YouTube description, blog text fallback |
+| `src/lib/claude.ts` | Prompt and output schema |
+| `src/app/actions.ts` | Save/delete recipes, manage categories |
+| `src/app/(main)/` | Home, add, recipe view, edit, settings |
+
+## Local development
 
 ```bash
+cp .env.example .env.local
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+For a local database: `npx supabase start`, then run `supabase/schema.sql` against it with `psql`.
