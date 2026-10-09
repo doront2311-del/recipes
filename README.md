@@ -9,7 +9,7 @@ A small personal recipe app for iPhone (Hebrew, RTL). Add a recipe from an Insta
 - Next.js 15 (App Router) + TypeScript + Tailwind 4, deployed on Vercel
 - Supabase: Postgres (`recipes`, `categories`) and a public Storage bucket `recipe-images`. Schema: [`supabase/schema.sql`](supabase/schema.sql)
 - Anthropic API (`claude-sonnet-5-5` by default, override with `ANTHROPIC_MODEL`), server-side only, structured outputs via `betaZodOutputFormat`
-- Single password (`APP_PASSWORD`) + long-lived httpOnly cookie, enforced in `src/middleware.ts`
+- No login (single personal user). `src/app/(main)/layout.tsx` shows a Hebrew setup-problem page when env vars or the database are misconfigured
 - Client-side search with Fuse.js over normalized Hebrew (no niqqud, final letters folded)
 
 ## Layout

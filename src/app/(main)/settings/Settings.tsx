@@ -76,17 +76,6 @@ export default function Settings({ categories, counts }: { categories: Category[
         />
       )}
 
-      <section>
-        <button
-          className="btn-ghost w-full"
-          onClick={async () => {
-            await fetch("/api/logout", { method: "POST" });
-            window.location.href = "/login";
-          }}
-        >
-          התנתקות
-        </button>
-      </section>
     </div>
   );
 }
