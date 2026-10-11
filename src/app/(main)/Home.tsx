@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import ClearButton from "@/components/ClearButton";
 import RecipeCard from "@/components/RecipeCard";
 import { buildSearch } from "@/lib/search";
 import type { Category, Recipe } from "@/lib/types";
@@ -11,6 +13,7 @@ export default function Home({ recipes, categories }: { recipes: Recipe[]; categ
   const params = useSearchParams();
   const selected = params.get("c");
   const [query, setQuery] = useState(params.get("q") ?? "");
+  const [open, setOpen] = useState(false);
 
   const search = useMemo(() => buildSearch(recipes), [recipes]);
   const byId = useMemo(() => new Map(recipes.map((r) => [r.id, r])), [recipes]);
@@ -31,9 +34,8 @@ export default function Home({ recipes, categories }: { recipes: Recipe[]; categ
   };
 
   const searching = query.trim().length > 0;
-  let list: Recipe[] = searching
-    ? search(query).map((id) => byId.get(id)!).filter(Boolean)
-    : recipes;
+  const matches: Recipe[] = searching ? search(query).map((id) => byId.get(id)!).filter(Boolean) : [];
+  let list: Recipe[] = searching ? matches : recipes;
   if (selected) list = list.filter((r) => r.category_id === selected);
 
   const heading = searching
@@ -44,19 +46,59 @@ export default function Home({ recipes, categories }: { recipes: Recipe[]; categ
 
   return (
     <main className="mx-auto max-w-2xl px-4 pb-16 pt-4">
-      <div className="relative">
+      <div className="relative z-10">
         <input
           type="search"
-          className="field ps-10 text-base"
+          className="field pe-10 ps-10 text-base [&::-webkit-search-cancel-button]:hidden"
           placeholder="חיפוש: שם, מצרך, משהו מההוראות…"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);
             setParam("q", e.target.value || null);
+            setOpen(true);
           }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
           enterKeyHint="search"
         />
         <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-muted">🔍</span>
+        {query && (
+          <ClearButton
+            label="ניקוי החיפוש"
+            onClick={() => {
+              setQuery("");
+              setParam("q", null);
+            }}
+          />
+        )}
+        {open && searching && (
+          // preventDefault keeps the input focused so the tap reaches the link.
+          <div
+            className="absolute inset-x-0 top-full mt-1 max-h-[60vh] overflow-y-auto rounded-xl border border-line bg-white shadow-lg"
+            onPointerDown={(e) => e.preventDefault()}
+          >
+            {matches.length === 0 ? (
+              <p className="p-3 text-sm text-muted">לא נמצאו מתכונים</p>
+            ) : (
+              matches.slice(0, 8).map((r) => {
+                const cat = r.category_id ? catById.get(r.category_id) : undefined;
+                return (
+                  <Link
+                    key={r.id}
+                    href={`/recipes/${r.id}`}
+                    className="flex items-center gap-3 border-b border-line px-3 py-2.5 last:border-b-0 active:bg-cream"
+                  >
+                    <span className="text-xl">{cat?.emoji ?? "🍽️"}</span>
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{r.title || "ללא שם"}</span>
+                      {cat && <span className="block truncate text-xs text-muted">{cat.name}</span>}
+                    </span>
+                  </Link>
+                );
+              })
+            )}
+          </div>
+        )}
       </div>
 
       <div className="mt-4 grid grid-cols-3 gap-2">

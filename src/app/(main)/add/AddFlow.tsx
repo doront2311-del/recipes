@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { discardDraftImages } from "@/app/actions";
+import ClearButton from "@/components/ClearButton";
 import RecipeForm from "@/components/RecipeForm";
 import { compressImage } from "@/lib/compress";
 import type { Category, RecipeDraft } from "@/lib/types";
@@ -72,14 +73,16 @@ export default function AddFlow({ initialUrl, categories }: { initialUrl: string
     <div className="space-y-5 pb-10">
       <label className="block">
         <span className="mb-1 block font-semibold">לינק</span>
-        <input
-          className="field"
-          type="url"
-          dir="ltr"
-          placeholder="https://www.instagram.com/reel/…"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-        />
+        <div className="relative" dir="ltr">
+          <input
+            className="field pe-10"
+            type="url"
+            placeholder="https://www.instagram.com/reel/…"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+          />
+          {url && <ClearButton onClick={() => setUrl("")} label="מחיקת הלינק" />}
+        </div>
       </label>
 
       <div>
@@ -121,7 +124,14 @@ export default function AddFlow({ initialUrl, categories }: { initialUrl: string
       {error && <p className="rounded-xl bg-red-50 p-3 text-red-700">{error}</p>}
 
       <button className="btn-primary w-full py-3.5 text-lg" onClick={submit} disabled={busy}>
-        {busy ? "Claude קורא את המתכון…" : "✨ צור מתכון"}
+        {busy ? (
+          <>
+            <span className="inline-block animate-spin text-xl leading-none">⚙️</span>
+            Claude קורא את המתכון…
+          </>
+        ) : (
+          "✨ צור מתכון"
+        )}
       </button>
       {busy && <p className="text-center text-sm text-muted">זה לוקח בדרך כלל 20–40 שניות</p>}
     </div>

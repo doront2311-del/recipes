@@ -15,6 +15,71 @@ const EMPTY: UrlExtraction = { text: "", useful: false, imageUrl: null };
 const USER_AGENT = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
 
 export async function extractFromUrl(url: string): Promise<UrlExtraction> {
+  const code = instagramCode(url);
+  if (!code) return extractFromPage(url);
+  // Instagram hides captions from the normal page, but the public embed page often includes them.
+  const [page, embed] = await Promise.all([extractFromPage(url), extractInstagramEmbed(code)]);
+  if (!embed) return page;
+  return {
+    text: [embed.text, page.text].filter(Boolean).join("\n\n"),
+    useful: page.useful || embed.useful,
+    imageUrl: page.imageUrl ?? embed.imageUrl,
+  };
+}
+
+function instagramCode(url: string): string | null {
+  return url.match(/instagram\.com\/(?:[^/]+\/)?(?:reels?|p|tv)\/([A-Za-z0-9_-]+)/i)?.[1] ?? null;
+}
+
+const BROWSER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+
+async function extractInstagramEmbed(code: string): Promise<UrlExtraction | null> {
+  let html: string;
+  try {
+    const res = await fetch(`https://www.instagram.com/p/${code}/embed/captioned/`, {
+      headers: { "user-agent": BROWSER_UA, "accept-language": "en-US,en;q=0.9" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+    html = await res.text();
+  } catch {
+    return null;
+  }
+
+  let caption = "";
+  const div = html.match(/<div class="Caption">([\s\S]*?)<div class="CaptionComments"/i)?.[1];
+  if (div) {
+    caption = decodeEntities(
+      stripTags(div.replace(/<a[^>]*class="CaptionUsername"[^>]*>[\s\S]*?<\/a>/i, "").replace(/<br\s*\/?>/gi, "\n")),
+    ).trim();
+  }
+  if (!caption) {
+    // Some embed pages carry the caption only inside JSON (sometimes escaped twice).
+    const m =
+      html.match(/"edge_media_to_caption":\{"edges":\[\{"node":\{"text":"((?:[^"\\]|\\.)*)"/) ??
+      html.match(/\\"edge_media_to_caption\\":\{\\"edges\\":\[\{\\"node\\":\{\\"text\\":\\"((?:[^"\\]|\\.)*?)\\"\}/);
+    if (m) {
+      try {
+        let text = JSON.parse(`"${m[1]}"`);
+        if (text.includes('\\"') || text.includes("\\n")) text = JSON.parse(`"${text}"`);
+        caption = String(text).trim();
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  const img = html.match(/<img[^>]+class="EmbeddedMediaImage"[^>]+src="([^"]+)"/i)?.[1];
+  if (!caption && !img) return null;
+  return {
+    text: caption ? `Instagram caption:\n${caption}` : "",
+    useful: caption.length > 150,
+    imageUrl: img ? decodeEntities(img) : null,
+  };
+}
+
+async function extractFromPage(url: string): Promise<UrlExtraction> {
   let html: string;
   try {
     const parsed = new URL(url);
