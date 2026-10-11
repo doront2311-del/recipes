@@ -1,4 +1,5 @@
 import "server-only";
+import { supabaseUrl } from "./images";
 import { db } from "./supabase";
 
 /** Returns a Hebrew explanation of what's misconfigured, or null when the database is reachable. */
@@ -11,7 +12,7 @@ export async function setupProblem(): Promise<{ title: string; details: string }
     };
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL!.trim();
+  const url = supabaseUrl();
   if (!/^https:\/\/[a-z0-9-]+\.supabase\.co\/?$/i.test(url) && !url.startsWith("http://127.0.0.1")) {
     return {
       title: "כתובת Supabase לא נראית תקינה",
